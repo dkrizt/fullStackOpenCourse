@@ -26,25 +26,53 @@ const App = () => {
     setNewNumber(displayNumber);
   };
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    const nameObj = { name: newName, number: newNumber };
+ //Create or update a phonebook log on submission
+ const handleSubmit = (event) => {
+  event.preventDefault();
+  const nameObj = { name: newName, number: newNumber };
 
-    //check if name object already exists before adding to array
-    const isConflict = persons.some(
-      (person) => person.name.toLowerCase() === nameObj.name.toLowerCase()
+  // Check if the person already exists in the phonebook
+  const existingPerson = persons.find(
+    (person) => person.name.toLowerCase() === nameObj.name.toLowerCase()
+  );
+
+  if (existingPerson) {
+    // Ask for confirmation before updating the number
+    const confirmUpdate = window.confirm(
+      `${existingPerson.name} is already in the phonebook. Replace the old number with the new one?`
     );
 
-    if (isConflict) {
-      alert(`Conflict detected: ${nameObj.name} is already added to phonebook`);
-    } else {
-      phonebookService.create(nameObj).then((returnedPerson) => {
-        setPersons(persons.concat(returnedPerson));
-        setNewName("");
-        setNewNumber("");
-      });
+    if (confirmUpdate) {
+      // Update the person's phone number using HTTP PUT
+      phonebookService
+        .update(existingPerson.id, nameObj) // PUT request
+        .then((updatedPerson) => {
+          // Update state with the new data
+          setPersons((prevPersons) =>
+            prevPersons.map((person) =>
+              person.id === updatedPerson.id ? updatedPerson : person
+            )
+          );
+          setNewName("");
+          setNewNumber("");
+        })
+        .catch((error) => {
+          console.error("Error updating person:", error);
+          alert(
+            `Failed to update ${existingPerson.name}. They might have been removed from the server.`
+          );
+        });
     }
-  };
+  } else {
+    // Add a new person if they don't already exist
+    phonebookService.create(nameObj).then((returnedPerson) => {
+      setPersons(persons.concat(returnedPerson));
+      setNewName("");
+      setNewNumber("");
+    });
+  }
+};
+
 
   //Search through phonebook by name
   const handleSearch = (event) => {

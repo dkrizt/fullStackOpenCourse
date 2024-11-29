@@ -1,18 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PersonForm from "./components/PersonForm";
 import Filter from "./components/Filter";
 import Persons from "./components/Persons";
+import phonebookService from "./services/phonebook";
 
 const App = () => {
-  const [persons, setPersons] = useState([
-    { name: "Arto Hellas", number: "040-123456", id: 1 },
-    { name: "Ada Lovelace", number: "39-44-5323523", id: 2 },
-    { name: "Dan Abramov", number: "12-43-234345", id: 3 },
-    { name: "Mary Poppendieck", number: "39-23-6423122", id: 4 },
-  ]);
+  const [persons, setPersons] = useState([]);
   const [newNumber, setNewNumber] = useState("");
   const [newName, setNewName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    phonebookService
+      .getAll()
+      .then((initialPersons) => setPersons(initialPersons));
+  }, []);
 
   const handleSetNewName = (event) => {
     const displayName = event.target.value;
@@ -36,12 +38,15 @@ const App = () => {
     if (isConflict) {
       alert(`Conflict detected: ${nameObj.name} is already added to phonebook`);
     } else {
-      setPersons(persons.concat(nameObj));
-      setNewName("");
-      setNewNumber("");
+      phonebookService.create(nameObj).then((returnedPerson) => {
+        setPersons(persons.concat(returnedPerson));
+        setNewName("");
+        setNewNumber("");
+      });
     }
   };
 
+  //Search through phonebook by name
   const handleSearch = (event) => {
     const searchTerm = event.target.value;
     setSearchQuery(searchTerm);
@@ -51,11 +56,31 @@ const App = () => {
     person.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  //Delete a phonebook log
+  const handleDelete = (id) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this contact?");
+    
+    if (confirmDelete) {
+      phonebookService
+        .remove(id)
+        .then(() => {
+          setPersons((prevPersons) => prevPersons.filter((person) => person.id !== id));
+        })
+        .catch((error) => {
+          console.error("Error in handleDelete:", error);
+          alert("Failed to delete the contact. It might have been removed already.");
+        });
+    }
+  };
+  
+  
+  
+
   return (
     <div>
       <h2>Phonebook</h2>
 
-      <Filter searchQuery={searchQuery} handleSearch={handleSearch}/>
+      <Filter searchQuery={searchQuery} handleSearch={handleSearch} />
 
       <h2>Add a new Phone Directory</h2>
 
@@ -69,8 +94,7 @@ const App = () => {
 
       <h2>Numbers</h2>
 
-      <Persons filteredItems={filteredItems}/>
-
+      <Persons filteredItems={filteredItems} handleDelete={handleDelete}/>
     </div>
   );
 };

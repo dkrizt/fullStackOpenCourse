@@ -3,12 +3,17 @@ import PersonForm from "./components/PersonForm";
 import Filter from "./components/Filter";
 import Persons from "./components/Persons";
 import phonebookService from "./services/phonebook";
+import Notification from "./components/Notification";
 
 const App = () => {
   const [persons, setPersons] = useState([]);
   const [newNumber, setNewNumber] = useState("");
   const [newName, setNewName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusMsg, setStatusMsg] = useState({
+    status: "",
+    message: "",
+  });
 
   useEffect(() => {
     phonebookService
@@ -26,53 +31,75 @@ const App = () => {
     setNewNumber(displayNumber);
   };
 
- //Create or update a phonebook log on submission
- const handleSubmit = (event) => {
-  event.preventDefault();
-  const nameObj = { name: newName, number: newNumber };
+  //Create or update a phonebook log on submission
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    const nameObj = { name: newName, number: newNumber };
 
-  // Check if the person already exists in the phonebook
-  const existingPerson = persons.find(
-    (person) => person.name.toLowerCase() === nameObj.name.toLowerCase()
-  );
-
-  if (existingPerson) {
-    // Ask for confirmation before updating the number
-    const confirmUpdate = window.confirm(
-      `${existingPerson.name} is already in the phonebook. Replace the old number with the new one?`
+    // Check if the person already exists in the phonebook
+    const existingPerson = persons.find(
+      (person) => person.name.toLowerCase() === nameObj.name.toLowerCase()
     );
 
-    if (confirmUpdate) {
-      // Update the person's phone number using HTTP PUT
-      phonebookService
-        .update(existingPerson.id, nameObj) // PUT request
-        .then((updatedPerson) => {
-          // Update state with the new data
-          setPersons((prevPersons) =>
-            prevPersons.map((person) =>
-              person.id === updatedPerson.id ? updatedPerson : person
-            )
-          );
-          setNewName("");
-          setNewNumber("");
-        })
-        .catch((error) => {
-          console.error("Error updating person:", error);
-          alert(
-            `Failed to update ${existingPerson.name}. They might have been removed from the server.`
-          );
-        });
-    }
-  } else {
-    // Add a new person if they don't already exist
-    phonebookService.create(nameObj).then((returnedPerson) => {
-      setPersons(persons.concat(returnedPerson));
-      setNewName("");
-      setNewNumber("");
-    });
-  }
-};
+    if (existingPerson) {
+      // Ask for confirmation before updating the number
+      const confirmUpdate = window.confirm(
+        `${existingPerson.name} is already in the phonebook. Replace the old number with the new one?`
+      );
 
+      if (confirmUpdate) {
+        // Update the person's phone number using HTTP PUT
+        phonebookService
+          .update(existingPerson.id, nameObj) // PUT request
+          .then((updatedPerson) => {
+            // Update state with the new data
+            setPersons((prevPersons) =>
+              prevPersons.map((person) =>
+                person.id === updatedPerson.id ? updatedPerson : person
+              )
+            );
+
+            setStatusMsg({
+              status: "success",
+              message: `${existingPerson.name}'s phone number has been updated`,
+            });
+            setTimeout(() => {
+              setStatusMsg(null);
+            }, 5000);
+
+            setNewName("");
+            setNewNumber("");
+          })
+
+          .catch((error) => {
+            setStatusMsg({
+              status: "error",
+              message: error.response?.data?.error||"Failed to add the contact. Try again later.",
+            });
+            setTimeout(() => setStatusMsg(null), 5000);
+          });
+      }
+    } else {
+      // Add a new person if they don't already exist
+      phonebookService
+    .create(nameObj)
+    .then((returnedPerson) => {
+      setPersons(persons.concat(returnedPerson));
+      setStatusMsg({
+        status: "success",
+        message: `${nameObj.name} has been added to the phonebook`,
+      });
+      setTimeout(() => setStatusMsg(null), 5000);
+    })
+    .catch((error) => {
+      setStatusMsg({
+        status: "error",
+        message: error.response?.data?.error||"Failed to add the contact. Try again later.",
+      });
+      setTimeout(() => setStatusMsg(null), 5000);
+    });
+    }
+  };
 
   //Search through phonebook by name
   const handleSearch = (event) => {
@@ -86,27 +113,34 @@ const App = () => {
 
   //Delete a phonebook log
   const handleDelete = (id) => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this contact?");
-    
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this contact?"
+    );
+
     if (confirmDelete) {
       phonebookService
         .remove(id)
         .then(() => {
-          setPersons((prevPersons) => prevPersons.filter((person) => person.id !== id));
+          setPersons((prevPersons) =>
+            prevPersons.filter((person) => person.id !== id)
+          );
         })
         .catch((error) => {
-          console.error("Error in handleDelete:", error);
-          alert("Failed to delete the contact. It might have been removed already.");
+          setStatusMsg({
+            status: "error",
+            message: error.response?.data?.error||"Failed to complete delete operation. An error occurred.",
+          });
+          setTimeout(() => setStatusMsg(null), 5000);
         });
     }
   };
-  
-  
-  
 
   return (
     <div>
       <h2>Phonebook</h2>
+      {statusMsg && <Notification statusMsg={statusMsg} />}
+
+      {/* <Notification message={statusMsg.message} status={statusMsg.status} /> */}
 
       <Filter searchQuery={searchQuery} handleSearch={handleSearch} />
 
@@ -122,7 +156,7 @@ const App = () => {
 
       <h2>Numbers</h2>
 
-      <Persons filteredItems={filteredItems} handleDelete={handleDelete}/>
+      <Persons filteredItems={filteredItems} handleDelete={handleDelete} />
     </div>
   );
 };

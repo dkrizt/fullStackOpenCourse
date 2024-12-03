@@ -1,0 +1,16 @@
+GET http://localhost:3001/api/persons
+
+###
+GET http://localhost:3001/api/persons/4
+
+###
+DELETE http://localhost:3001/api/persons/4
+
+###
+POST http://localhost:3001/api/persons
+content-type: application/json
+
+{
+    "name": "ogbu chigozie",
+    "number": "313-234-234"
+}

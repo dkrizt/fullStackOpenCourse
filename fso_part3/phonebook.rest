@@ -1,16 +1,19 @@
 GET http://localhost:3001/api/persons
 
 ###
-GET http://localhost:3001/api/persons/4
+GET http://localhost:3001/api/persons/6751a12a3772f9588c04e450
 
 ###
-DELETE http://localhost:3001/api/persons/4
+GET http://localhost:3001/info
+
+###
+DELETE http://localhost:3001/api/persons/6751ddd1c5566de02d65c385
 
 ###
 POST http://localhost:3001/api/persons
 content-type: application/json
 
 {
-    "name": "ogbu chigozie",
-    "number": "313-234-234"
+    "name": "jackson freddy",
+    "telephone": "103-234-534"
 }

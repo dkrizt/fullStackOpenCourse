@@ -90,6 +90,8 @@ const App = () => {
         message: `${nameObj.name} has been added to the phonebook`,
       });
       setTimeout(() => setStatusMsg(null), 5000);
+      setNewName("");
+      setNewNumber("");
     })
     .catch((error) => {
       setStatusMsg({

@@ -1,0 +1,12 @@
+GET http://localhost:3003/api/blogs
+
+###
+POST http://localhost:3003/api/blogs
+content-type: application/json
+
+{
+  "title": "cars",
+  "author": "rolls royce",
+  "url": "https://google.com/cars",
+  "likes": 110
+}

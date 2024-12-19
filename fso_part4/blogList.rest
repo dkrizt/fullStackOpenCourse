@@ -10,3 +10,13 @@ content-type: application/json
   "url": "https://google.com/chickens",
   "likes": 110
 }
+
+###
+POST http://localhost:3003/api/users
+content-type: application/json
+
+{
+  "name": "marcus",
+  "username": "Marcus Rashford",
+  "password": "2424536"
+}

@@ -3,6 +3,7 @@ const app = express()
 const cors = require('cors')
 const mongoose = require('mongoose')
 const morgan = require('morgan')
+const usersRouter = require('./controllers/user')
 const blogsRouter = require('./controllers/blog')
 const config = require('./utils/config')
 const logger = require('./utils/logger')
@@ -20,10 +21,14 @@ mongoose
 
 app.use(cors())
 app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
+
 morgan.token('body', (req) => JSON.stringify(req.body))
 app.use(
   morgan(':method :url :status :res[content-length] - :response-time ms :body')
 )
+
+app.use('/api/users', usersRouter)
 app.use('/api/blogs', blogsRouter)
 app.use(middleware.unknownEndpoint)
 app.use(middleware.errorHandler)

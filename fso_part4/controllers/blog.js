@@ -1,24 +1,38 @@
 const blogsRouter = require('express').Router()
 const Blog = require('../models/blog')
+const User = require('../models/user')
 
-blogsRouter.get('/', (request, response) => {
-  Blog.find({}).then((blogs) => {
-    response.json(blogs)
+blogsRouter.get('/', async (request, response) => {
+  const blogs = await Blog.find({}).populate('user', {
+    username: 1,
+    name: 1,
+    id: 1,
   })
+  response.json(blogs)
 })
 
 blogsRouter.post('/', async (req, res) => {
-  const { title, author, url, likes } = req.body
+  try {
+    const { title, author, url, likes, userId } = req.body
 
-  // Validate required fields
-  if (!title || !url) {
-    return res.status(400).json({ error: 'Title and URL are required' })
+    const user = await User.findById(userId)
+
+    // Validate required fields
+    if (!title || !url) {
+      return res.status(400).json({ error: 'Title and URL are required' })
+    }
+
+    const blog = new Blog({ title, author, url, likes, user: user.id })
+
+    const savedBlog = await blog.save()
+
+    user.blogs = user.blogs.concat(savedBlog._id)
+    await user.save()
+
+    res.status(201).json(savedBlog)
+  } catch (error) {
+    res.status(400).json('An error occurred: ', error)
   }
-
-  const blog = new Blog({ title, author, url, likes })
-
-  const savedBlog = await blog.save()
-  res.status(201).json(savedBlog)
 })
 
 // Delete a blog by ID

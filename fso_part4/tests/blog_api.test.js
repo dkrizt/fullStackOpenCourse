@@ -9,10 +9,6 @@ const helper = require('./test_helper')
 
 const Blog = require('../models/blog')
 
-/* describe('when there are some blogs saved initially', () => {
-
-}) */
-
 beforeEach(async () => {
   await Blog.deleteMany({})
   console.log('delete successful')

@@ -1,5 +1,6 @@
 const Blog = require('../models/blog')
 const User = require('../models/user')
+const jwt = require('jsonwebtoken')
 
 const initialBlogs = [
   {
@@ -22,8 +23,28 @@ const initialBlogs = [
   },
 ]
 
+const getTokenForTestUser = async (username = 'testuser') => {
+  // Ensure the test user doesn't already exist
+  const existingUser = await User.findOne({ username })
+  let testUser = existingUser
+
+  if (!existingUser) {
+    testUser = new User({
+      username,
+      passwordHash: 'hashedpassword',
+    })
+    await testUser.save()
+  }
+
+  // Generate a valid token
+  const userForToken = { username: testUser.username, id: testUser.id }
+  const token = jwt.sign(userForToken, process.env.SECRET, { expiresIn: '1h' })
+
+  return { token, user: testUser }
+}
+
 const nonExistingId = async () => {
-  const blog = new Blog({ content: 'willremovethissoon' })
+  const blog = new Blog({ title: 'Temporary Blog', url: 'http://temp.url' })
   await blog.save()
   await blog.deleteOne()
 
@@ -41,6 +62,7 @@ const blogsInDb = async () => {
 }
 
 module.exports = {
+  getTokenForTestUser,
   initialBlogs,
   nonExistingId,
   blogsInDb,

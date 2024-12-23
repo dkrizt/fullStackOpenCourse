@@ -1,7 +1,11 @@
-const blogsRouter = require('express').Router()
+const express = require('express')
+const blogsRouter = express.Router()
 const Blog = require('../models/blog')
-const User = require('../models/user')
+const middleware = require('../utils/middleware')
+/* const User = require('../models/user')
+const jwt = require('jsonwebtoken') */
 
+// Route to get all blogs
 blogsRouter.get('/', async (request, response) => {
   const blogs = await Blog.find({}).populate('user', {
     username: 1,
@@ -11,11 +15,11 @@ blogsRouter.get('/', async (request, response) => {
   response.json(blogs)
 })
 
-blogsRouter.post('/', async (req, res) => {
+// Route to create a new blog
+blogsRouter.post('/', middleware.userExtractor, async (req, res) => {
   try {
-    const { title, author, url, likes, userId } = req.body
-
-    const user = await User.findById(userId)
+    const { title, author, url, likes } = req.body
+    const user = req.user // Extracted user from middleware
 
     // Validate required fields
     if (!title || !url) {
@@ -23,7 +27,6 @@ blogsRouter.post('/', async (req, res) => {
     }
 
     const blog = new Blog({ title, author, url, likes, user: user.id })
-
     const savedBlog = await blog.save()
 
     user.blogs = user.blogs.concat(savedBlog._id)
@@ -31,26 +34,38 @@ blogsRouter.post('/', async (req, res) => {
 
     res.status(201).json(savedBlog)
   } catch (error) {
-    res.status(400).json('An error occurred: ', error)
+    console.error('Error in creating blog:', error.message)
+    res.status(500).json({ error: 'Server error' })
   }
 })
 
-// Delete a blog by ID
-blogsRouter.delete('/:id', async (req, res) => {
+// Route to delete a blog by ID
+blogsRouter.delete('/:id', middleware.userExtractor, async (req, res) => {
   const { id } = req.params
+  const user = req.user // Extracted user from middleware
 
   try {
-    const deletedBlog = await Blog.findByIdAndDelete(id)
-    if (!deletedBlog) {
+    const blog = await Blog.findById(id)
+    if (!blog) {
       return res.status(404).json({ error: 'Blog not found' })
     }
-    res.status(204).end() // No content
+
+    // Ensure the user deleting is the creator
+    if (blog.user.toString() !== user.id.toString()) {
+      return res
+        .status(403)
+        .json({ error: 'Unauthorized: Only the creator can delete this blog' })
+    }
+
+    await Blog.findByIdAndDelete(id)
+    res.status(204).end()
   } catch (error) {
-    res.status(400).json({ error: `Invalid ID format_${error}` })
+    console.error('Error in deleting blog:', error.message)
+    res.status(400).json({ error: 'Invalid ID or server error' })
   }
 })
 
-// Update a blog by ID
+// Route to update a blog by ID
 blogsRouter.put('/:id', async (req, res) => {
   const { id } = req.params
   const { likes } = req.body
@@ -68,7 +83,7 @@ blogsRouter.put('/:id', async (req, res) => {
 
     res.json(updatedBlog)
   } catch (error) {
-    res.status(400).json({ error: `Invalid ID or data format_ ${error}` })
+    res.status(400).json({ error: `Invalid ID or data format: ${error}` })
   }
 })
 

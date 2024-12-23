@@ -45,7 +45,9 @@ test('blog posts have the unique identifier property named id', async () => {
   assert.strictEqual(blog._id, undefined)
 })
 
-test('POST /api/blogs creates a new blog post', async () => {
+test('POST /api/blogs creates a new blog post with valid token', async () => {
+  const { token } = await helper.getTokenForTestUser()
+
   const newBlog = {
     title: 'Canonical String Reduction',
     author: 'Edsger W. Dijkstra',
@@ -55,8 +57,9 @@ test('POST /api/blogs creates a new blog post', async () => {
 
   await api
     .post('/api/blogs')
+    .set('Authorization', `Bearer ${token}`)
     .send(newBlog)
-    .expect(201) // Expect "Created" status
+    .expect(201) // Created
     .expect('Content-Type', /application\/json/)
 
   const blogsAfterPost = await Blog.find({})
@@ -64,6 +67,20 @@ test('POST /api/blogs creates a new blog post', async () => {
 
   const titles = blogsAfterPost.map((blog) => blog.title)
   assert.ok(titles.includes('Canonical String Reduction'))
+})
+
+test('POST /api/blogs fails with 401 if token is missing', async () => {
+  const newBlog = {
+    title: 'Unauthorized Blog',
+    author: 'Anonymous',
+    url: 'https://example.com/unauthorized',
+    likes: 5,
+  }
+
+  await api.post('/api/blogs').send(newBlog).expect(401) // Unauthorized
+
+  const blogsAfterPost = await Blog.find({})
+  assert.strictEqual(blogsAfterPost.length, 2) // No new blog added
 })
 
 test('POST /api/blogs defaults likes to 0 if missing', async () => {
@@ -113,40 +130,49 @@ test('POST /api/blogs fails with status 400 if url is missing', async () => {
 })
 
 describe('Deleting a blog post', () => {
-  let initialBlog
+  let initialBlog, token, user
 
   beforeEach(async () => {
     await Blog.deleteMany({})
+    const auth = await helper.getTokenForTestUser()
+    token = auth.token
+    user = auth.user
+
     initialBlog = new Blog({
       title: 'Blog to be deleted',
       author: 'Author to Delete',
       url: 'https://example.com/delete-blog',
       likes: 3,
+      user: user.id,
     })
     await initialBlog.save()
   })
 
-  test('successfully deletes a blog with valid ID', async () => {
-    const blogsAtStart = await Blog.find({})
-    assert.strictEqual(blogsAtStart.length, 1)
+  test('successfully deletes a blog with valid token', async () => {
+    await api
+      .delete(`/api/blogs/${initialBlog.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(204) // No content
 
-    await api.delete(`/api/blogs/${initialBlog.id}`).expect(204) // No content
-
-    const blogsAtEnd = await Blog.find({})
-    assert.strictEqual(blogsAtEnd.length, 0) // Blog should be deleted
+    const blogsAfterTest = await Blog.find({})
+    assert.strictEqual(blogsAfterTest.length, 0)
   })
 
-  test('fails with status 404 if blog does not exist', async () => {
-    const nonExistingId = new mongoose.Types.ObjectId().toString()
-
-    await api.delete(`/api/blogs/${nonExistingId}`).expect(404) // Blog not found
+  test('fails with 401 if token is missing', async () => {
+    await api.delete(`/api/blogs/${initialBlog.id}`).expect(401) // Unauthorized
 
     const blogsAfterTest = await Blog.find({})
     assert.strictEqual(blogsAfterTest.length, 1) // No deletion occurred
   })
 
-  test('fails with status 400 if ID is invalid', async () => {
-    await api.delete('/api/blogs/invalidID').expect(400) // Invalid ID format
+  test('fails with 403 if token does not belong to the creator', async () => {
+    const otherUserAuth = await helper.getTokenForTestUser()
+    const otherUserToken = otherUserAuth.token
+
+    await api
+      .delete(`/api/blogs/${initialBlog.id}`)
+      .set('Authorization', `Bearer ${otherUserToken}`)
+      .expect(403) // Forbidden
 
     const blogsAfterTest = await Blog.find({})
     assert.strictEqual(blogsAfterTest.length, 1) // No deletion occurred

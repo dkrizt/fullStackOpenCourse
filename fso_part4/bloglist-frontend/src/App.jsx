@@ -4,11 +4,11 @@ import blogService from './services/blogs'
 import loginService from './services/login'
 import LoginForm from './components/LoginForm'
 import NewBlogForm from './components/NewBlogForm'
+import Notification from './components/Notification'
 
 const App = () => {
   const [blogs, setBlogs] = useState([])
   const [username, setUsername] = useState('')
-  const [errorMessage, setErrorMessage] = useState(null)
   const [password, setPassword] = useState('')
   const [user, setUser] = useState(null)
   const [blogData, setBlogData] = useState({
@@ -17,6 +17,13 @@ const App = () => {
     url: '',
     likes: '',
   })
+  const [notification, setNotification] = useState(null)
+
+  // Utility to set notifications with a timeout
+  const showNotification = (text, type = 'success') => {
+    setNotification({ text, type })
+    setTimeout(() => setNotification(null), 5000)
+  }
 
   useEffect(() => {
     const fetchBlogs = async () => {
@@ -24,7 +31,7 @@ const App = () => {
         const blogs = await blogService.getAll()
         setBlogs(blogs)
       } catch (error) {
-        console.error('Failed to fetch blogs:', error)
+        showNotification('Failed to fetch blogs.', 'error')
       }
     }
 
@@ -53,13 +60,12 @@ const App = () => {
         JSON.stringify(userCredentials)
       )
       setUser(userCredentials)
+      blogService.setToken(userCredentials.token)
       setUsername('')
       setPassword('')
+      showNotification('Login successful!', 'success')
     } catch (exception) {
-      setErrorMessage('Wrong credentials')
-      setTimeout(() => {
-        setErrorMessage(null)
-      }, 5000)
+      showNotification('Wrong username or password', 'error')
     }
   }
 
@@ -67,12 +73,13 @@ const App = () => {
     const { name, value } = e.target
     setBlogData({
       ...blogData,
-      [name]: value, // Dynamically update the field
+      [name]: value,
     })
   }
 
   const handleCreateNewBlog = async (event) => {
     event.preventDefault()
+
     try {
       const newBlog = await blogService.create(blogData)
       setBlogs((prevBlogs) => [...prevBlogs, newBlog])
@@ -82,20 +89,25 @@ const App = () => {
         url: '',
         likes: '',
       })
+      showNotification(
+        `A new blog "${blogData.title}" by ${blogData.author} added`,
+        'success'
+      )
     } catch (error) {
-      console.error('Failed to create blogs:', error)
+      showNotification('Failed to create blog.', 'error')
     }
   }
 
-  // Logout handler
   const handleLogOut = () => {
-    window.localStorage.removeItem('loggedBlogappUser') // Clear localStorage
-    setUser(null) // Reset user state to null
+    window.localStorage.removeItem('loggedBlogappUser')
+    setUser(null)
+    showNotification('You have logged out.', 'success')
   }
 
   return user === null ? (
     <div>
       <h2>Log in to application</h2>
+      <Notification message={notification} />
       <LoginForm
         username={username}
         password={password}
@@ -103,11 +115,11 @@ const App = () => {
         setPassword={setPassword}
         handleLogin={handleLogin}
       />
-      {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
     </div>
   ) : (
     <div>
       <h2>blogs</h2>
+      <Notification message={notification} />
       <p>
         {user.name} is logged-in <button onClick={handleLogOut}>Logout</button>
       </p>

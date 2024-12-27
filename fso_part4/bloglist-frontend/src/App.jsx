@@ -28,8 +28,8 @@ const App = () => {
   useEffect(() => {
     const fetchBlogs = async () => {
       try {
-        const blogs = await blogService.getAll()
-        setBlogs(blogs)
+        const fetchedBlogs = await blogService.getAll()
+        setBlogs(sortBlogs(fetchedBlogs)) // Sort blogs initially
       } catch (error) {
         showNotification('Failed to fetch blogs.', 'error')
       }
@@ -69,6 +69,11 @@ const App = () => {
     }
   }
 
+  // Function to sort blogs by likes
+  const sortBlogs = (blogs) => {
+    return blogs.sort((a, b) => b.likes - a.likes)
+  }
+
   const handleBlogChange = (e) => {
     const { name, value } = e.target
     setBlogData({
@@ -82,7 +87,7 @@ const App = () => {
 
     try {
       const newBlog = await blogService.create(blogData)
-      setBlogs((prevBlogs) => [...prevBlogs, newBlog])
+      setBlogs(sortBlogs((prevBlogs) => [...prevBlogs, newBlog]))
       setBlogData({
         title: '',
         author: '',
@@ -95,6 +100,36 @@ const App = () => {
       )
     } catch (error) {
       showNotification('Failed to create blog.', 'error')
+    }
+  }
+
+  const updateBlog = async (id, updatedBlog) => {
+    try {
+      const returnedBlog = await blogService.update(id, updatedBlog)
+      setBlogs(
+        sortBlogs(
+          blogs.map((blog) =>
+            blog.id === id
+              ? { ...returnedBlog, user: blog.user } // Merge the user field
+              : blog
+          )
+        )
+      )
+    } catch (error) {
+      console.error('Error updating blog:', error)
+    }
+  }
+
+  const deleteBlog = async (id) => {
+    try {
+      await blogService.remove(id)
+      setBlogs(blogs.filter((blog) => blog.id !== id))
+      showNotification('Blog deleted successfully', 'success')
+    } catch (error) {
+      showNotification(
+        error.response?.data?.error || 'Failed to delete the blog',
+        'error'
+      )
     }
   }
 
@@ -123,10 +158,17 @@ const App = () => {
       <p>
         {user.name} is logged-in <button onClick={handleLogOut}>Logout</button>
       </p>
+      <div>
+        {blogs.map((blog) => (
+          <Blog
+            key={blog.id}
+            blog={blog}
+            updateBlog={updateBlog}
+            deleteBlog={deleteBlog}
+          />
+        ))}
+      </div>
 
-      {blogs.map((blog) => (
-        <Blog key={blog.id} blog={blog} />
-      ))}
       <NewBlogForm
         blogData={blogData}
         handleBlogChange={handleBlogChange}

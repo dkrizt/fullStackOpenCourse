@@ -75,7 +75,7 @@ blogsRouter.put('/:id', async (req, res) => {
       id,
       { likes },
       { new: true, runValidators: true, context: 'query' }
-    )
+    ).populate('user', { name: 1, username: 1 }) // Populate user details
 
     if (!updatedBlog) {
       return res.status(404).json({ error: 'Blog not found' })

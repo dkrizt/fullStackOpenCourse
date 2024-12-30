@@ -18,6 +18,8 @@ const NewBlogForm = ({ blogData, handleBlogChange, handleCreateNewBlog }) => {
               type="text"
               value={blogData.title}
               name="title"
+              placeholder="Title"
+              aria-label="Title"
               onChange={handleBlogChange}
             />
           </div>
@@ -27,6 +29,8 @@ const NewBlogForm = ({ blogData, handleBlogChange, handleCreateNewBlog }) => {
               type="text"
               value={blogData.author}
               name="author"
+              placeholder="Author"
+              aria-label="Author"
               onChange={handleBlogChange}
             />
           </div>
@@ -36,6 +40,8 @@ const NewBlogForm = ({ blogData, handleBlogChange, handleCreateNewBlog }) => {
               type="text"
               value={blogData.url}
               name="url"
+              placeholder="Url"
+              aria-label="Url"
               onChange={handleBlogChange}
             />
           </div>
@@ -45,6 +51,8 @@ const NewBlogForm = ({ blogData, handleBlogChange, handleCreateNewBlog }) => {
               type="text"
               value={blogData.likes}
               name="likes"
+              placeholder="Likes"
+              aria-label="Likes"
               onChange={handleBlogChange}
             />
           </div>

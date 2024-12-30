@@ -87,7 +87,7 @@ const App = () => {
 
     try {
       const newBlog = await blogService.create(blogData)
-      setBlogs(sortBlogs((prevBlogs) => [...prevBlogs, newBlog]))
+      setBlogs((prevBlogs) => sortBlogs([...prevBlogs, newBlog]))
       setBlogData({
         title: '',
         author: '',
@@ -99,6 +99,7 @@ const App = () => {
         'success'
       )
     } catch (error) {
+      console.error('Error creating blog:', error)
       showNotification('Failed to create blog.', 'error')
     }
   }
